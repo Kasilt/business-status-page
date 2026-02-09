@@ -134,8 +134,10 @@ class EventTimelineScreen extends StatelessWidget {
     switch (type) {
       case EventPostType.detection: return Colors.red;
       case EventPostType.investigation: return Colors.orange;
+      case EventPostType.identified: return Colors.deepOrange;
       case EventPostType.workaround: return Colors.purple;
-      case EventPostType.resolution: return Colors.green;
+      case EventPostType.monitoring: return Colors.blueGrey;
+      case EventPostType.resolved: return Colors.green;
       case EventPostType.info: return Colors.blue;
     }
   }
@@ -144,8 +146,10 @@ class EventTimelineScreen extends StatelessWidget {
     switch (type) {
       case EventPostType.detection: return Icons.warning_amber;
       case EventPostType.investigation: return Icons.search;
+      case EventPostType.identified: return Icons.gps_fixed;
       case EventPostType.workaround: return Icons.build;
-      case EventPostType.resolution: return Icons.check;
+      case EventPostType.monitoring: return Icons.visibility;
+      case EventPostType.resolved: return Icons.check_circle;
       case EventPostType.info: return Icons.info_outline;
     }
   }

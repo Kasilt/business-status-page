@@ -3,8 +3,10 @@ import 'ci.dart';
 enum EventPostType {
   detection, // Détection d'un incident
   investigation, // Investigation en cours
+  identified, // Cause identifiée
   workaround, // Contournement
-  resolution, // Résolution
+  monitoring, // Surveillance
+  resolved, // Résolution
   info, // Information diverse
 }
 
