@@ -15,5 +15,13 @@ abstract class CIRepository {
 
   Future<List<StatusEvent>> getAllEvents(); // Ajout pour récupérer les incidents
 
-  // TODO: Ajouter méthodes CRUD (Create, Update, Delete) pour l'admin
+  // Write operations
+  Future<void> createCI(CI ci);
+  Future<void> updateCI(CI ci);
+  Future<void> deleteCI(String id);
+
+  // Dependency operations
+  Future<void> createDependency(Dependency dep);
+  Future<void> updateDependency(Dependency dep); // Pour modifier le poids ou le filtre
+  Future<void> deleteDependency(String id);
 }

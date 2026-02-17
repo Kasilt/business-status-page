@@ -7,6 +7,29 @@ import '../../domain/repositories/ci_repository.dart';
 
 /// Implémentation "Bouchon" (Mock) du Repository
 class MockCIRepository implements CIRepository {
+
+  
+  // ... autres méthodes ...
+
+  @override
+  Future<void> createCI(CI ci) async {}
+
+  @override
+  Future<void> updateCI(CI ci) async {}
+
+  @override
+  Future<void> deleteCI(String id) async {}
+
+  @override
+  Future<void> createDependency(Dependency dep) async {}
+
+  @override
+  Future<void> updateDependency(Dependency dep) async {}
+
+  @override
+  Future<void> deleteDependency(String id) async {}
+
+
   
   // Simulation de la base de données (Fichiers)
   List<CI> _mockCIs = [];

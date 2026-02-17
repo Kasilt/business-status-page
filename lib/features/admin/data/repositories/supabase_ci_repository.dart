@@ -65,6 +65,10 @@ class SupabaseCIRepository implements CIRepository {
         startTime: DateTime.parse(json['start_time']).toLocal(),
         endTime: json['end_time'] != null ? DateTime.parse(json['end_time']).toLocal() : null,
         posts: posts,
+        stage: _parseStage(json['stage']),
+        impactedBus: json['impacted_bus'] != null ? List<String>.from(json['impacted_bus']) : [],
+        externalLink: json['external_link'],
+        externalRef: json['external_ref'],
       );
     }).toList();
   }
@@ -94,6 +98,18 @@ class SupabaseCIRepository implements CIRepository {
     }
   }
 
+  IncidentStage _parseStage(String? stage) {
+    switch (stage) {
+      case 'detection': return IncidentStage.detection;
+      case 'investigation': return IncidentStage.investigation;
+      case 'identified': return IncidentStage.identified;
+      case 'monitoring': return IncidentStage.monitoring;
+      case 'resolved': return IncidentStage.resolved;
+      case 'closed': return IncidentStage.closed;
+      default: return IncidentStage.detection;
+    }
+  }
+
   EventPostType _parsePostType(String type) {
     switch (type) {
       case 'detection': return EventPostType.detection;
@@ -104,5 +120,60 @@ class SupabaseCIRepository implements CIRepository {
       case 'workaround': return EventPostType.workaround;
       default: return EventPostType.detection;
     }
+  }
+
+  @override
+  Future<void> createCI(CI ci) async {
+    await _client.from('cis').insert({
+      'id': ci.id,
+      'name': ci.name,
+      'description': ci.description,
+      'type': ci.type.name, // 'application', 'technical', etc.
+      'scope': ci.scope.name, // 'global', 'local'
+      // 'status' est calculé, pas stocké directement comme propriété statique généralement, 
+      // mais ici on peut initialiser si besoin ou ignorer.
+    });
+  }
+
+  @override
+  Future<void> updateCI(CI ci) async {
+    await _client.from('cis').update({
+      'name': ci.name,
+      'description': ci.description,
+      'type': ci.type.name,
+      'scope': ci.scope.name,
+    }).eq('id', ci.id);
+  }
+
+  @override
+  Future<void> deleteCI(String id) async {
+    await _client.from('cis').delete().eq('id', id);
+  }
+
+  // --- Dependency Write Operations ---
+  
+  @override
+  Future<void> createDependency(Dependency dep) async {
+    await _client.from('dependencies').insert({
+      'source_ci_id': dep.sourceCiId,
+      'target_ci_id': dep.targetCiId,
+      'impact_weight': dep.impactWeight,
+      'bu_filter': dep.buFilter,
+    });
+  }
+
+  @override
+  Future<void> updateDependency(Dependency dep) async {
+    await _client.from('dependencies').update({
+      'source_ci_id': dep.sourceCiId, // Généralement on ne change pas les clés étrangères, mais bon
+      'target_ci_id': dep.targetCiId,
+      'impact_weight': dep.impactWeight,
+      'bu_filter': dep.buFilter,
+    }).eq('id', dep.id);
+  }
+
+  @override
+  Future<void> deleteDependency(String id) async {
+    await _client.from('dependencies').delete().eq('id', id);
   }
 }

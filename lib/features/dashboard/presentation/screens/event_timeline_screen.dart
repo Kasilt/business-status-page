@@ -29,14 +29,63 @@ class EventTimelineScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: _getStageColor(event.stage).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.red),
+                border: Border.all(color: _getStageColor(event.stage)),
               ),
-              child: Text(
-                'Statut : En Cours (Depuis ${DateTime.now().difference(event.startTime).inHours}h)',
-                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(_getStageIcon(event.stage), size: 16, color: _getStageColor(event.stage)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Phase : ${_formatStage(event.stage)}',
+                    style: TextStyle(color: _getStageColor(event.stage), fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: 16),
+            
+            // BUs Impactées
+            if (event.impactedBus.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Wrap(
+                  spacing: 8,
+                  children: event.impactedBus.map((bu) => Chip(
+                    label: Text(bu, style: const TextStyle(fontSize: 12)),
+                    backgroundColor: Colors.grey.shade200,
+                  )).toList(),
+                ),
+              ),
+
+            // Lien Externe
+            if (event.externalLink != null)
+               Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: InkWell(
+                  onTap: () {
+                    // TODO: Implement URL Launching
+                    // launchUrl(Uri.parse(event.externalLink!));
+                    print('Ouvrir ${event.externalLink}');
+                  },
+                  child: Row(
+                    children: [
+                      const Icon(Icons.link, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Text(
+                        event.externalRef != null ? 'Voir ticket ${event.externalRef}' : 'Voir le ticket externe',
+                        style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+             Text(
+              event.description,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 16),
             Text(
@@ -151,6 +200,39 @@ class EventTimelineScreen extends StatelessWidget {
       case EventPostType.monitoring: return Icons.visibility;
       case EventPostType.resolved: return Icons.check_circle;
       case EventPostType.info: return Icons.info_outline;
+    }
+  }
+
+  Color _getStageColor(IncidentStage stage) {
+    switch (stage) {
+      case IncidentStage.detection: return Colors.red;
+      case IncidentStage.investigation: return Colors.orange;
+      case IncidentStage.identified: return Colors.deepOrange;
+      case IncidentStage.monitoring: return Colors.blue;
+      case IncidentStage.resolved: return Colors.green;
+      case IncidentStage.closed: return Colors.grey;
+    }
+  }
+
+  IconData _getStageIcon(IncidentStage stage) {
+    switch (stage) {
+      case IncidentStage.detection: return Icons.warning_amber;
+      case IncidentStage.investigation: return Icons.search;
+      case IncidentStage.identified: return Icons.gps_fixed;
+      case IncidentStage.monitoring: return Icons.visibility;
+      case IncidentStage.resolved: return Icons.check_circle;
+      case IncidentStage.closed: return Icons.archive;
+    }
+  }
+
+  String _formatStage(IncidentStage stage) {
+    switch (stage) {
+      case IncidentStage.detection: return "Détection";
+      case IncidentStage.investigation: return "Investigation";
+      case IncidentStage.identified: return "Identifié";
+      case IncidentStage.monitoring: return "Surveillance";
+      case IncidentStage.resolved: return "Résolu";
+      case IncidentStage.closed: return "Clôturé";
     }
   }
 }

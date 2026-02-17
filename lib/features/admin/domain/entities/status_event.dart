@@ -28,6 +28,16 @@ class EventPost {
   });
 }
 
+/// Phase de l'incident (Cycle de vie)
+enum IncidentStage {
+  detection, 
+  investigation, 
+  identified, 
+  monitoring, 
+  resolved, 
+  closed 
+}
+
 /// Un Événement (Incident, Maintenance...)
 class StatusEvent {
   final String id;
@@ -38,6 +48,12 @@ class StatusEvent {
   final DateTime startTime;
   final DateTime? endTime; // Null si en cours
   final List<EventPost> posts;
+  
+  // Nouveaux champs Phase 2
+  final IncidentStage stage; 
+  final List<String> impactedBus; // Codes des BUs impactées (ex: 'LILLE', 'WEB')
+  final String? externalLink; // Lien Jira/ServiceNow
+  final String? externalRef; // ID Externe (INC-1234)
 
   StatusEvent({
     required this.id,
@@ -48,5 +64,9 @@ class StatusEvent {
     required this.startTime,
     this.endTime,
     this.posts = const [],
+    this.stage = IncidentStage.detection,
+    this.impactedBus = const [],
+    this.externalLink,
+    this.externalRef,
   });
 }

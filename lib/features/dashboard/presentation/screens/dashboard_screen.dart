@@ -5,6 +5,9 @@ import '../providers/status_provider.dart';
 import 'event_timeline_screen.dart';
 
 import '../widgets/status_history_bar.dart';
+import '../../../admin/domain/services/auth_service.dart';
+import '../../../admin/presentation/screens/login_screen.dart';
+import '../../../admin/presentation/screens/admin_dashboard_screen.dart';
 
 /// L'écran principal du tableau de bord
 /// Analogie AS/400 : Le membre Source DSPF
@@ -31,10 +34,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Analogie : La boucle d'affichage (EXFMT)
     final provider = Provider.of<StatusProvider>(context);
 
+
+
+// ...
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Business Status One'),
         backgroundColor: Colors.indigo,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.admin_panel_settings),
+            onPressed: () {
+                final user = AuthService().currentUser;
+                // On recharge les données au retour de l'admin (au cas où des modifs ont été faites)
+                final provider = Provider.of<StatusProvider>(context, listen: false);
+                
+                if (user != null) {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()))
+                    .then((_) => provider.loadDashboard());
+                } else {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen()))
+                    .then((_) => provider.loadDashboard());
+                }
+              },
+          ),
+        ],
       ),
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
