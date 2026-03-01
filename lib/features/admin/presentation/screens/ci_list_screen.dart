@@ -4,6 +4,7 @@ import '../../domain/entities/ci.dart';
 import '../../domain/repositories/ci_repository.dart';
 import '../../../dashboard/presentation/providers/status_provider.dart'; // Pour réutiliser le repository injecté
 import 'ci_form_screen.dart';
+import 'ci_detail_screen.dart';
 
 class CIListScreen extends StatefulWidget {
   const CIListScreen({super.key});
@@ -107,6 +108,14 @@ class _CIListScreenState extends State<CIListScreen> {
                   leading: Icon(_getIconForType(ci.type), color: Colors.indigo),
                   title: Text(ci.name),
                   subtitle: Text('${ci.type.name} - ${ci.scope.name}'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CIDetailScreen(ci: ci),
+                      ),
+                    ).then((_) => _loadCIs()); // Rafraîchit au retour au cas où modifié
+                  },
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

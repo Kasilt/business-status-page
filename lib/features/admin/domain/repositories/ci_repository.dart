@@ -1,6 +1,7 @@
 import '../entities/ci.dart';
 import '../entities/dependency.dart';
 import '../entities/status_event.dart';
+import '../entities/journey_map.dart';
 
 /// Interface du Repository
 /// Analogie AS/400 : C'est le Prototype (PR) de vos procédures d'accès aux données.
@@ -24,4 +25,10 @@ abstract class CIRepository {
   Future<void> createDependency(Dependency dep);
   Future<void> updateDependency(Dependency dep); // Pour modifier le poids ou le filtre
   Future<void> deleteDependency(String id);
+
+  // Journey Map operations
+  Future<List<JourneyMap>> getAllJourneyMaps();
+  Future<void> createJourneyMap(JourneyMap jm);
+  Future<void> updateJourneyMap(JourneyMap jm);
+  Future<void> deleteJourneyMap(String id);
 }

@@ -7,8 +7,15 @@ import '../../../dashboard/presentation/providers/status_provider.dart';
 
 class DependencyFormScreen extends StatefulWidget {
   final Dependency? dependency; // Null = Création
+  final String? prefilledSourceId;
+  final String? prefilledTargetId;
 
-  const DependencyFormScreen({super.key, this.dependency});
+  const DependencyFormScreen({
+    super.key, 
+    this.dependency,
+    this.prefilledSourceId,
+    this.prefilledTargetId,
+  });
 
   @override
   State<DependencyFormScreen> createState() => _DependencyFormScreenState();
@@ -26,8 +33,8 @@ class _DependencyFormScreenState extends State<DependencyFormScreen> {
   @override
   void initState() {
     super.initState();
-    _sourceCiId = widget.dependency?.sourceCiId;
-    _targetCiId = widget.dependency?.targetCiId;
+    _sourceCiId = widget.dependency?.sourceCiId ?? widget.prefilledSourceId;
+    _targetCiId = widget.dependency?.targetCiId ?? widget.prefilledTargetId;
     _impactWeight = widget.dependency?.impactWeight ?? 100;
     _loadCIs();
   }

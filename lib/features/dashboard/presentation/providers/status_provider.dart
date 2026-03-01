@@ -6,6 +6,8 @@ import '../../../admin/domain/repositories/ci_repository.dart';
 import '../../../admin/domain/services/impact_service.dart';
 import '../../../admin/domain/services/event_service.dart';
 
+import '../../../admin/domain/entities/journey_map.dart';
+
 class StatusProvider extends ChangeNotifier {
   final CIRepository repository;
   final ImpactService _impactService = ImpactService();
@@ -14,12 +16,14 @@ class StatusProvider extends ChangeNotifier {
   List<CI> _cis = [];
   List<Dependency> _dependencies = [];
   List<StatusEvent> _events = []; // Liste des événements chargés
+  List<JourneyMap> _journeyMaps = []; // Ajout des Journey Maps
   bool _isLoading = false;
 
   // Cache des statuts calculés (Map<CiId, Status>)
   Map<String, CIStatus> _calculatedStatus = {};
 
   List<CI> get cis => _cis;
+  List<JourneyMap> get journeyMaps => _journeyMaps;
   bool get isLoading => _isLoading;
 
   StatusProvider({required this.repository});
@@ -35,11 +39,13 @@ class StatusProvider extends ChangeNotifier {
         repository.getAllCIs(),
         repository.getAllDependencies(),
         repository.getAllEvents(),
+        repository.getAllJourneyMaps(),
       ]);
       
       _cis = results[0] as List<CI>;
       _dependencies = results[1] as List<Dependency>;
       _events = results[2] as List<StatusEvent>;
+      _journeyMaps = results[3] as List<JourneyMap>;
 
       // Calcul de l'impact pour chaque CI (Scope Global par défaut pour l'instant)
       _recalculateImpacts();

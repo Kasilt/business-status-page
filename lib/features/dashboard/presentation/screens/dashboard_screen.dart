@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../admin/domain/entities/ci.dart';
 import '../providers/status_provider.dart';
 import 'event_timeline_screen.dart';
+import '../../../admin/domain/entities/journey_map.dart';
 
 import '../widgets/status_history_bar.dart';
 import '../../../admin/domain/services/auth_service.dart';
@@ -31,49 +32,121 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Analogie : La boucle d'affichage (EXFMT)
     final provider = Provider.of<StatusProvider>(context);
 
+    // Si on charge, on affiche un loader simple
+    if (provider.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
+    // Préparation des onglets
+    final maps = provider.journeyMaps;
+    final tabCount = 1 + maps.length; // Onglet Global + 1 par Journey Map
 
-// ...
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Business Status One'),
-        backgroundColor: Colors.indigo,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () {
-                final user = AuthService().currentUser;
-                // On recharge les données au retour de l'admin (au cas où des modifs ont été faites)
-                final provider = Provider.of<StatusProvider>(context, listen: false);
-                
-                if (user != null) {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()))
-                    .then((_) => provider.loadDashboard());
-                } else {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen()))
-                    .then((_) => provider.loadDashboard());
-                }
-              },
-          ),
-        ],
-      ),
-      body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              // On affiche seulement les "Racines" (Celles qui ne sont pas des enfants d'autres dans la liste)
-              // Pour simplifier l'exemple ici, on filtre ceux qui sont de type BusinessService ou qui n'ont pas de parents affichés.
-              // Mais pour l'instant, affichons les BusinessService en premier niveau.
-              itemCount: provider.cis.where((c) => c.type == CIType.businessService).length,
-              itemBuilder: (context, index) {
-                final rootCIs = provider.cis.where((c) => c.type == CIType.businessService).toList();
-                final ci = rootCIs[index];
-                return _buildCITile(ci, provider); // Appel récursif pour l'affichage
-              },
+    return DefaultTabController(
+      length: tabCount,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Business Status One'),
+          backgroundColor: Colors.indigo,
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings),
+              onPressed: () {
+                  final user = AuthService().currentUser;
+                  final provider = Provider.of<StatusProvider>(context, listen: false);
+                  
+                  if (user != null) {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()))
+                      .then((_) => provider.loadDashboard());
+                  } else {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen()))
+                      .then((_) => provider.loadDashboard());
+                  }
+                },
             ),
+          ],
+          bottom: TabBar(
+            isScrollable: true,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: [
+              const Tab(text: 'Vue Globale', icon: Icon(Icons.public)),
+              ...maps.map((m) => Tab(text: m.name, icon: const Icon(Icons.map))),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Onglet 1 : Vue Globale (Tous les services racines)
+            _buildGlobalView(provider),
+            
+            // Onglets suivants : Vues par Journey Map
+            ...maps.map((m) => _buildJourneyMapView(provider, m)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlobalView(StatusProvider provider) {
+    final rootCIs = provider.cis.where((c) => c.type == CIType.businessService).toList();
+    
+    if (rootCIs.isEmpty) return const Center(child: Text("Aucun service disponible."));
+
+    return ListView.builder(
+      itemCount: rootCIs.length,
+      itemBuilder: (context, index) {
+        return _buildCITile(rootCIs[index], provider);
+      },
+    );
+  }
+
+  Widget _buildJourneyMapView(StatusProvider provider, JourneyMap map) {
+    if (map.cis.isEmpty) {
+      return const Center(child: Text("Aucun composant dans cette Journey Map."));
+    }
+
+    // On récupère les vrais objets CI dans l'ordre de la position définie
+    final cisToDisplay = map.cis.map((jmci) {
+        return provider.cis.firstWhere((c) => c.id == jmci.ciId, orElse: () => CI(id: '', name: 'Introuvable', description: '', type: CIType.application));
+    }).where((c) => c.id.isNotEmpty).toList();
+
+    return ListView.builder(
+      itemCount: cisToDisplay.length,
+      itemBuilder: (context, index) {
+        // Dans une Journey Map, on n'affiche généralement pas l'arbre enfant,
+        // on l'affiche "à plat" car c'est une vue de synthèse.
+        // Si besoin d'afficher l'arbre, on pourrait utiliser _buildCITile sans modifier,
+        // mais pour une Journey Map, forcer une tuile simple est souvent préféré.
+        // Ici, on utilise _buildCITile normal. Modifiez si besoin d'une tuile "plate".
+        return _buildFlatCITile(cisToDisplay[index], provider, index + 1);
+      },
+    );
+  }
+
+  Widget _buildFlatCITile(CI ci, StatusProvider provider, int stepNumber) {
+    final status = provider.getEffectiveStatus(ci);
+    final color = _getColorForStatus(status);
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: color.withOpacity(0.5), width: 2)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.1),
+          foregroundColor: color,
+          child: Text('$stepNumber', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        title: Text(ci.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('Impact calculé automatiquement incluant l\'infrastructure invisible', style: const TextStyle(fontSize: 11)),
+        trailing: _getStatusChip(status, context, ci, provider),
+      ),
     );
   }
 
