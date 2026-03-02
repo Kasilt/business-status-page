@@ -8,7 +8,12 @@ class ImpactService {
   
   /// Calcule le statut effectif d'un CI pour un contexte donné
   /// Analogie : Appel du main PGM de calcul avec paramètres
-  CIStatus calculateStatus(CI target, List<CI> allCIs, List<Dependency> allDeps, {BusinessUnit? contextBu, Map<String, CIStatus>? activeEventImpacts}) {
+  CIStatus calculateStatus(CI target, List<CI> allCIs, List<Dependency> allDeps, {BusinessUnit? contextBu, Map<String, CIStatus>? activeEventImpacts, Set<String>? visited}) {
+    visited ??= {};
+    if (visited.contains(target.id)) {
+      return CIStatus.operational; // Cycle detected, assume operational or ignore impact
+    }
+    visited.add(target.id);
     
     // 0. Statut intrinsèque (Overrides par événement ?)
     CIStatus selfStatus = target.status;
@@ -43,7 +48,7 @@ class ImpactService {
         final childCI = allCIs.firstWhere((c) => c.id == dep.targetCiId);
 
         // Appel Récursif
-        final childStatus = calculateStatus(childCI, allCIs, allDeps, contextBu: contextBu, activeEventImpacts: activeEventImpacts);
+        final childStatus = calculateStatus(childCI, allCIs, allDeps, contextBu: contextBu, activeEventImpacts: activeEventImpacts, visited: Set.from(visited!));
 
         // Calcul des dégâts apportés par cette dépendance
         if (childStatus == CIStatus.down) {

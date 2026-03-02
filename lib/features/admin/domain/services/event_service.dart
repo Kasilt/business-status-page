@@ -7,7 +7,11 @@ import '../entities/status_event.dart';
 class EventService {
   
   /// Retourne la liste des événements ACTIFS qui impactent ce CI (lui-même ou ses enfants)
-  List<StatusEvent> getEventsForCI(CI target, List<CI> allCIs, List<Dependency> allDeps, List<StatusEvent> allEvents) {
+  List<StatusEvent> getEventsForCI(CI target, List<CI> allCIs, List<Dependency> allDeps, List<StatusEvent> allEvents, {Set<String>? visited}) {
+    visited ??= {};
+    if (visited.contains(target.id)) return [];
+    visited.add(target.id);
+
     // 1. Événements affectant directement ce CI
     final directEvents = allEvents.where((e) => e.affectedCiId == target.id && e.endTime == null).toList();
 
@@ -23,7 +27,7 @@ class EventService {
       if (childCI.id == target.id) continue;
 
       // Appel récursif
-      final subEvents = getEventsForCI(childCI, allCIs, allDeps, allEvents);
+      final subEvents = getEventsForCI(childCI, allCIs, allDeps, allEvents, visited: Set.from(visited!));
       childEvents.addAll(subEvents);
     }
 

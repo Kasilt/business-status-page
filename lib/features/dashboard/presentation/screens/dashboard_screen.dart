@@ -152,7 +152,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Construit une tuile (Ligne) pour un CI, potentiellement dépliable
   /// Analogie AS/400 : Une ligne de Sous-Fichier avec option "+" (Fold/Drop)
-  Widget _buildCITile(CI ci, StatusProvider provider) {
+  Widget _buildCITile(CI ci, StatusProvider provider, {Set<String>? visited}) {
+    visited ??= {};
+    if (visited.contains(ci.id)) {
+      return ListTile(
+        leading: const Icon(Icons.warning, color: Colors.orange),
+        title: Text('${ci.name} (Boucle détectée)', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+        subtitle: const Text('Dépendance cyclique'),
+      );
+    }
+    visited.add(ci.id);
+
     // 1. Chercher les enfants de ce CI
     final children = provider.getChildren(ci);
     final status = provider.getEffectiveStatus(ci);
@@ -193,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Text(ci.name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text('${ci.description} [${ci.scope.name.toUpperCase()}]'),
         trailing: _getStatusChip(status, context, ci, provider), // Chip à droite (taille naturelle)
-        children: children.map<Widget>((child) => _buildCITile(child, provider)).toList(), // Récursion visuelle
+        children: children.map<Widget>((child) => _buildCITile(child, provider, visited: Set.from(visited!))).toList(), // Récursion visuelle
       );
     }
 
