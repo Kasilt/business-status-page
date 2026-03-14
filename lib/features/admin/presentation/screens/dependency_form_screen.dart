@@ -23,6 +23,7 @@ class DependencyFormScreen extends StatefulWidget {
 
 class _DependencyFormScreenState extends State<DependencyFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _tagsController = TextEditingController();
   
   String? _sourceCiId;
   String? _targetCiId;
@@ -36,7 +37,18 @@ class _DependencyFormScreenState extends State<DependencyFormScreen> {
     _sourceCiId = widget.dependency?.sourceCiId ?? widget.prefilledSourceId;
     _targetCiId = widget.dependency?.targetCiId ?? widget.prefilledTargetId;
     _impactWeight = widget.dependency?.impactWeight ?? 100;
+    
+    if (widget.dependency?.tags != null && widget.dependency!.tags.isNotEmpty) {
+      _tagsController.text = widget.dependency!.tags.join(', ');
+    }
+    
     _loadCIs();
+  }
+  
+  @override
+  void dispose() {
+    _tagsController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCIs() async {
@@ -64,6 +76,12 @@ class _DependencyFormScreenState extends State<DependencyFormScreen> {
     try {
       final repository = Provider.of<StatusProvider>(context, listen: false).repository;
       
+      final tags = _tagsController.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+
       final dep = Dependency(
         // ID généré par la DB si création, sinon existant (Note: updateDependency utilise l'ID)
         // Attention: Supabase génère l'ID, donc en création on peut passer un ID temporaire ou null si l'entité le permettais
@@ -73,7 +91,7 @@ class _DependencyFormScreenState extends State<DependencyFormScreen> {
         sourceCiId: _sourceCiId!,
         targetCiId: _targetCiId!,
         impactWeight: _impactWeight,
-        buFilter: null, // TODO: Ajouter support BU Filter plus tard
+        tags: tags,
       );
 
       if (widget.dependency == null) {
@@ -142,6 +160,17 @@ class _DependencyFormScreenState extends State<DependencyFormScreen> {
                 onChanged: (v) => setState(() => _impactWeight = v.round()),
               ),
               const Text('Si la Cible tombe, le Parent est impacté à ce niveau.', style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _tagsController,
+                decoration: const InputDecoration(
+                  labelText: 'Tags de Scope (séparés par des virgules)',
+                  border: OutlineInputBorder(),
+                  hintText: 'ex: France, Web, Caisse',
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text('Optionnel: Définir des tags pour limiter l\'impact de cette dépendance à un scope précis.', style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 32),
               SizedBox(
                 height: 50,

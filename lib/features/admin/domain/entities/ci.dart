@@ -33,6 +33,7 @@ class CI {
   final CIScope scope;
   final String? owner; // Responsable
   final Map<String, dynamic> attributes; // Champs libres (Extended attrs)
+  final List<String> tags; // Liste des labels des tags associés
 
   // Historique (Barre de vie) - Analogie: Sous-fichier d'historique
   final int historyRetentionDays; 
@@ -48,6 +49,7 @@ class CI {
     this.scope = CIScope.global,
     this.owner,
     this.attributes = const {},
+    this.tags = const [],
     this.historyRetentionDays = 90, // Par défaut 90 jours
     this.history = const [],
   });

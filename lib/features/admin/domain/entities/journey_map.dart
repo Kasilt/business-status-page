@@ -3,12 +3,14 @@ class JourneyMap {
   final String name;
   final String? description;
   final List<JourneyMapCI> cis;
+  final List<String> tags;
 
   JourneyMap({
     required this.id,
     required this.name,
     this.description,
     this.cis = const [],
+    this.tags = const [],
   });
 
   factory JourneyMap.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class JourneyMap {
               ?.map((ci) => JourneyMapCI.fromJson(ci))
               .toList() ??
           [],
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
     );
   }
 
@@ -28,6 +31,7 @@ class JourneyMap {
       'id': id,
       'name': name,
       if (description != null) 'description': description,
+      'tags': tags,
     };
   }
 }

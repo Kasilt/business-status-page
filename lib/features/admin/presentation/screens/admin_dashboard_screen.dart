@@ -4,6 +4,7 @@ import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import 'ci_list_screen.dart';
 import 'dependency_list_screen.dart';
 import 'journey_map_list_screen.dart';
+import 'event_list_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -60,6 +61,15 @@ class AdminDashboardScreen extends StatelessWidget {
             description: 'Créer des vues simplifiées par composant métier.',
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const JourneyMapListScreen()));
+            },
+          ),
+          _buildAdminCard(
+            context,
+            icon: Icons.warning_amber,
+            title: 'Gérer les Événements',
+            description: 'Créer et suivre les incidents et maintenances.',
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EventListScreen()));
             },
           ),
         ]

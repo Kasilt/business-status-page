@@ -15,6 +15,9 @@ abstract class CIRepository {
   Future<List<Dependency>> getAllDependencies();
 
   Future<List<StatusEvent>> getAllEvents(); // Ajout pour récupérer les incidents
+  Future<void> createEvent(StatusEvent event);
+  Future<void> updateEvent(StatusEvent event);
+  Future<void> deleteEvent(String id);
 
   // Write operations
   Future<void> createCI(CI ci);

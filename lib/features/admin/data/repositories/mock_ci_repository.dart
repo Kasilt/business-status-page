@@ -18,7 +18,12 @@ class MockCIRepository implements CIRepository {
   Future<void> updateCI(CI ci) async {}
 
   @override
-  Future<void> deleteCI(String id) async {}
+  Future<void> deleteCI(String id) async {
+    if (_mockDeps.any((d) => d.sourceCiId == id || d.targetCiId == id)) {
+      throw Exception('Impossible de supprimer ce CI : il est utilisé dans une ou plusieurs dépendances.');
+    }
+    _mockCIs.removeWhere((ci) => ci.id == id);
+  }
 
   @override
   Future<void> createDependency(Dependency dep) async {}
@@ -27,7 +32,9 @@ class MockCIRepository implements CIRepository {
   Future<void> updateDependency(Dependency dep) async {}
 
   @override
-  Future<void> deleteDependency(String id) async {}
+  Future<void> deleteDependency(String id) async {
+    _mockDeps.removeWhere((dep) => dep.id == id);
+  }
 
 
   
@@ -171,6 +178,28 @@ class MockCIRepository implements CIRepository {
   }
   @override
   Future<List<StatusEvent>> getAllEvents() async {
+    await Future.delayed(const Duration(milliseconds: 500));
     return _mockEvents;
+  }
+
+  @override
+  Future<void> createEvent(StatusEvent event) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _mockEvents.add(event);
+  }
+
+  @override
+  Future<void> updateEvent(StatusEvent event) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final index = _mockEvents.indexWhere((e) => e.id == event.id);
+    if (index != -1) {
+      _mockEvents[index] = event;
+    }
+  }
+
+  @override
+  Future<void> deleteEvent(String id) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _mockEvents.removeWhere((e) => e.id == id);
   }
 }

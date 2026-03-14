@@ -23,6 +23,7 @@ class SupabaseCIRepository implements CIRepository {
         type: _parseType(json['type']),
         scope: _parseScope(json['scope']),
         status: CIStatus.operational, // Statut par défaut, sera écrasé par le calcul
+        tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
         history: [], // TODO: Implémenter l'historique réel
       );
     }).toList();
@@ -36,7 +37,7 @@ class SupabaseCIRepository implements CIRepository {
       sourceCiId: json['source_ci_id'],
       targetCiId: json['target_ci_id'],
       impactWeight: json['impact_weight'],
-      buFilter: json['bu_filter'] != null ? List<String>.from(json['bu_filter']) : null,
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
     )).toList();
   }
 
@@ -67,7 +68,7 @@ class SupabaseCIRepository implements CIRepository {
         endTime: json['end_time'] != null ? DateTime.parse(json['end_time']).toLocal() : null,
         posts: posts,
         stage: _parseStage(json['stage']),
-        impactedBus: json['impacted_bus'] != null ? List<String>.from(json['impacted_bus']) : [],
+        tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
         externalLink: json['external_link'],
         externalRef: json['external_ref'],
       );
@@ -123,6 +124,82 @@ class SupabaseCIRepository implements CIRepository {
     }
   }
 
+  // --- Event Write Operations ---
+
+  @override
+  Future<void> createEvent(StatusEvent event) async {
+    // 1. Insert the main event
+    await _client.from('events').insert({
+      'id': event.id,
+      'title': event.title,
+      'description': event.description,
+      'status': event.status.name, // Will be mapped back in the DB triggers/logic if necessary, or just store String
+      'affected_ci_id': event.affectedCiId,
+      'start_time': event.startTime.toIso8601String(),
+      'end_time': event.endTime?.toIso8601String(),
+      'stage': event.stage.name,
+      'tags': event.tags,
+      'external_link': event.externalLink,
+      'external_ref': event.externalRef,
+    });
+
+    // 2. Insert posts if any
+    if (event.posts.isNotEmpty) {
+      final postsParam = event.posts.map((p) => {
+        'id': p.id,
+        'event_id': event.id,
+        'posted_at': p.date.toIso8601String(),
+        'author': p.author,
+        'message': p.message,
+        'type': p.type.name,
+      }).toList();
+
+      await _client.from('event_posts').insert(postsParam);
+    }
+  }
+
+  @override
+  Future<void> updateEvent(StatusEvent event) async {
+    // 1. Update the main event
+    await _client.from('events').update({
+      'title': event.title,
+      'description': event.description,
+      'status': event.status.name,
+      'affected_ci_id': event.affectedCiId,
+      'start_time': event.startTime.toIso8601String(),
+      'end_time': event.endTime?.toIso8601String(),
+      'stage': event.stage.name,
+      'tags': event.tags,
+      'external_link': event.externalLink,
+      'external_ref': event.externalRef,
+    }).eq('id', event.id);
+
+    // 2. For simplicity, delete all old posts and recreate them (or diff if performance is an issue)
+    await _client.from('event_posts').delete().eq('event_id', event.id);
+
+    if (event.posts.isNotEmpty) {
+      final postsParam = event.posts.map((p) => {
+        'id': p.id,
+        'event_id': event.id,
+        'posted_at': p.date.toIso8601String(),
+        'author': p.author,
+        'message': p.message,
+        'type': p.type.name,
+      }).toList();
+
+      await _client.from('event_posts').insert(postsParam);
+    }
+  }
+
+  @override
+  Future<void> deleteEvent(String id) async {
+    // Assuming ON DELETE CASCADE is set up in the DB for event_posts.
+    // If not, we should delete event_posts manually here first.
+    // For safety, let's delete posts explicitly if cascade is missing just in case:
+    await _client.from('event_posts').delete().eq('event_id', id);
+    await _client.from('events').delete().eq('id', id);
+  }
+
   @override
   Future<void> createCI(CI ci) async {
     await _client.from('cis').insert({
@@ -131,6 +208,7 @@ class SupabaseCIRepository implements CIRepository {
       'description': ci.description,
       'type': ci.type.name, // 'application', 'technical', etc.
       'scope': ci.scope.name, // 'global', 'local'
+      'tags': ci.tags,
       // 'status' est calculé, pas stocké directement comme propriété statique généralement, 
       // mais ici on peut initialiser si besoin ou ignorer.
     });
@@ -138,17 +216,44 @@ class SupabaseCIRepository implements CIRepository {
 
   @override
   Future<void> updateCI(CI ci) async {
-    await _client.from('cis').update({
+    final response = await _client.from('cis').update({
       'name': ci.name,
       'description': ci.description,
       'type': ci.type.name,
       'scope': ci.scope.name,
-    }).eq('id', ci.id);
+      'tags': ci.tags,
+    }).eq('id', ci.id).select();
+    
+    if (response.isEmpty) {
+      throw Exception('Aucun CI classé pour une mise à jour. Vérifiez les droits ou l\'ID.');
+    }
   }
 
   @override
   Future<void> deleteCI(String id) async {
-    await _client.from('cis').delete().eq('id', id);
+    // Vérification des dépendances
+    final deps = await _client.from('dependencies').select('id').or('source_ci_id.eq.$id,target_ci_id.eq.$id');
+    if (deps.isNotEmpty) {
+      throw Exception('Impossible de supprimer ce CI : il est utilisé dans une ou plusieurs dépendances.');
+    }
+
+    // Vérification des journey maps
+    final jmCis = await _client.from('journey_map_cis').select('ci_id').eq('ci_id', id);
+    if (jmCis.isNotEmpty) {
+      throw Exception('Impossible de supprimer ce CI : il est utilisé dans une Journey Map.');
+    }
+
+    // Vérification de l'historique (événements)
+    final events = await _client.from('events').select('id').eq('affected_ci_id', id);
+    if (events.isNotEmpty) {
+      throw Exception('Impossible de supprimer ce CI : il a des événements d\'historique associés.');
+    }
+
+    final response = await _client.from('cis').delete().eq('id', id).select();
+    
+    if (response.isEmpty) {
+        throw Exception('Aucun CI supprimé. Vérifiez les droits ou l\'ID.');
+    }
   }
 
   // --- Dependency Write Operations ---
@@ -159,7 +264,7 @@ class SupabaseCIRepository implements CIRepository {
       'source_ci_id': dep.sourceCiId,
       'target_ci_id': dep.targetCiId,
       'impact_weight': dep.impactWeight,
-      'bu_filter': dep.buFilter,
+      'tags': dep.tags,
     });
   }
 
@@ -169,13 +274,16 @@ class SupabaseCIRepository implements CIRepository {
       'source_ci_id': dep.sourceCiId, // Généralement on ne change pas les clés étrangères, mais bon
       'target_ci_id': dep.targetCiId,
       'impact_weight': dep.impactWeight,
-      'bu_filter': dep.buFilter,
-    }).eq('id', dep.id);
+      'tags': dep.tags,
+    }).eq('id', int.parse(dep.id));
   }
 
   @override
   Future<void> deleteDependency(String id) async {
-    await _client.from('dependencies').delete().eq('id', id);
+    final res = await _client.from('dependencies').delete().eq('id', int.parse(id)).select();
+    if (res.isEmpty) {
+      throw Exception('Aucune dépendance supprimée. Vérifiez les droits ou l\'ID.');
+    }
   }
 
   // --- Journey Map Operations ---
@@ -195,6 +303,7 @@ class SupabaseCIRepository implements CIRepository {
     await _client.from('journey_maps').insert({
       'name': jm.name,
       'description': jm.description,
+      'tags': jm.tags,
     });
     
     // 2. Insert the associated CIs if any
@@ -212,6 +321,7 @@ class SupabaseCIRepository implements CIRepository {
     await _client.from('journey_maps').update({
       'name': jm.name,
       'description': jm.description,
+      'tags': jm.tags,
     }).eq('id', jm.id);
     
     // 2. Clear old CIs and insert new ones (replace all strategy)

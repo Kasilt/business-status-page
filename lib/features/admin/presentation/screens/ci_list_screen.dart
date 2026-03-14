@@ -69,10 +69,22 @@ class _CIListScreenState extends State<CIListScreen> {
 
     if (confirm == true) {
       final repository = Provider.of<StatusProvider>(context, listen: false).repository;
-      // Appel deleteCI (cast car l'interface de base l'a peut-être pas encore selon le fichier vu)
-      // Mais on l'a ajouté à l'interface donc c'est bon.
-      await repository.deleteCI(ci.id); 
-      _loadCIs(); // Rechargement
+      try {
+        await repository.deleteCI(ci.id); 
+        _loadCIs(); // Rechargement
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${ci.name} supprimé avec succès')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 

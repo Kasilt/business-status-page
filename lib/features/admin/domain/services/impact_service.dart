@@ -40,7 +40,7 @@ class ImpactService {
 
     for (var dep in dependencies) {
       // Filtrage par BU
-      if (contextBu != null && dep.buFilter != null && !dep.buFilter!.contains(contextBu.code)) {
+      if (contextBu != null && dep.tags.isNotEmpty && !dep.tags.contains(contextBu.code)) {
         continue;
       }
 

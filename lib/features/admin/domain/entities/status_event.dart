@@ -51,7 +51,7 @@ class StatusEvent {
   
   // Nouveaux champs Phase 2
   final IncidentStage stage; 
-  final List<String> impactedBus; // Codes des BUs impactées (ex: 'LILLE', 'WEB')
+  final List<String> tags; // Codes des BUs impactées, ou tags génériques (ex: 'LILLE', 'WEB')
   final String? externalLink; // Lien Jira/ServiceNow
   final String? externalRef; // ID Externe (INC-1234)
 
@@ -65,7 +65,7 @@ class StatusEvent {
     this.endTime,
     this.posts = const [],
     this.stage = IncidentStage.detection,
-    this.impactedBus = const [],
+    this.tags = const [],
     this.externalLink,
     this.externalRef,
   });

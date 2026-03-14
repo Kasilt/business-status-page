@@ -10,15 +10,14 @@ class Dependency {
   /// Si le target tombe, à quel point le parent est touché ?
   final int impactWeight; 
 
-  /// (Optionnel) Si la relation n'est vraie que pour certaines BUs
-  /// Analogie: Enregistrement d'exception
-  final List<String>? buFilter;
+  /// Liste des labels des tags (Scope) associés pour filtrer l'impact
+  final List<String> tags;
 
   Dependency({
     required this.id,
     required this.sourceCiId,
     required this.targetCiId,
     this.impactWeight = 100, // 100% d'impact par défaut
-    this.buFilter,
+    this.tags = const [],
   });
 }

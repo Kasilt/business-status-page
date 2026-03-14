@@ -14,6 +14,7 @@ class DependencyListScreen extends StatefulWidget {
 
 class _DependencyListScreenState extends State<DependencyListScreen> {
   List<Dependency> _dependencies = [];
+  Map<String, String> _ciNames = {};
   bool _isLoading = true;
 
   @override
@@ -28,8 +29,16 @@ class _DependencyListScreenState extends State<DependencyListScreen> {
     
     try {
       final deps = await repository.getAllDependencies();
+      final cis = await repository.getAllCIs();
+      
+      final Map<String, String> ciNameMap = {};
+      for (var ci in cis) {
+         ciNameMap[ci.id] = ci.name;
+      }
+
       setState(() {
         _dependencies = deps;
+        _ciNames = ciNameMap;
         _isLoading = false;
       });
     } catch (e) {
@@ -41,6 +50,7 @@ class _DependencyListScreenState extends State<DependencyListScreen> {
   }
 
   Future<void> _deleteDependency(Dependency dep) async {
+    final repository = Provider.of<StatusProvider>(context, listen: false).repository;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -58,10 +68,19 @@ class _DependencyListScreenState extends State<DependencyListScreen> {
     );
 
     if (confirm == true) {
-      final repository = Provider.of<StatusProvider>(context, listen: false).repository;
-      // Il faut une méthode deleteDependency dans l'interface, on l'a ajoutée
-      await repository.deleteDependency(dep.id);
-      _loadDependencies();
+      try {
+        await repository.deleteDependency(dep.id);
+        if (mounted) _loadDependencies();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -93,10 +112,30 @@ class _DependencyListScreenState extends State<DependencyListScreen> {
               itemCount: _dependencies.length,
               itemBuilder: (context, index) {
                 final dep = _dependencies[index];
+                final sourceName = _ciNames[dep.sourceCiId] ?? dep.sourceCiId;
+                final targetName = _ciNames[dep.targetCiId] ?? dep.targetCiId;
+
                 return ListTile(
                   leading: const Icon(Icons.link, color: Colors.blueGrey),
-                  title: Text('${dep.sourceCiId} -> ${dep.targetCiId}'),
-                  subtitle: Text('Impact: ${dep.impactWeight}%'),
+                  title: Text('$sourceName -> $targetName'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Impact: ${dep.impactWeight}%'),
+                      if (dep.tags.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Wrap(
+                            spacing: 4.0,
+                            children: dep.tags.map((tag) => Chip(
+                              label: Text(tag, style: const TextStyle(fontSize: 10)),
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            )).toList(),
+                          ),
+                        ),
+                    ],
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

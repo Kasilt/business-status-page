@@ -48,12 +48,12 @@ class EventTimelineScreen extends StatelessWidget {
             const SizedBox(height: 16),
             
             // BUs Impactées
-            if (event.impactedBus.isNotEmpty)
+            if (event.tags.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Wrap(
                   spacing: 8,
-                  children: event.impactedBus.map((bu) => Chip(
+                  children: event.tags.map((bu) => Chip(
                     label: Text(bu, style: const TextStyle(fontSize: 12)),
                     backgroundColor: Colors.grey.shade200,
                   )).toList(),

@@ -82,6 +82,7 @@ class _CIDetailScreenState extends State<CIDetailScreen> {
   }
 
   Future<void> _deleteDependency(Dependency dep) async {
+    final repository = Provider.of<StatusProvider>(context, listen: false).repository;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -99,9 +100,27 @@ class _CIDetailScreenState extends State<CIDetailScreen> {
     );
 
     if (confirm == true) {
-      final repository = Provider.of<StatusProvider>(context, listen: false).repository;
-      await repository.deleteDependency(dep.id);
-      _loadData();
+      try {
+        await repository.deleteDependency(dep.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dépendance supprimée avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _loadData();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll('Exception: ', '')),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -197,14 +216,14 @@ class _CIDetailScreenState extends State<CIDetailScreen> {
 
   Widget _buildSectionTitle(String title, IconData icon, Color color, {required VoidCallback onAdd}) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 8),
-            Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-          ],
+        Icon(icon, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title, 
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
         ),
         IconButton(
           icon: const Icon(Icons.add_circle, color: Colors.blue),
